@@ -1,0 +1,26 @@
+name: charter
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  report-only:
+    name: report-only (documented default)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: janzong/agent-charters@v1
+        with:
+          path: AGENTS.md
+
+  enforce:
+    name: enforce (expected RED by design)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: janzong/agent-charters@v1
+        with:
+          path: AGENTS.md
+          fail-on-missing: 'workflow,gotchas'
