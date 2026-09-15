@@ -30,20 +30,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: janzong/agent-charters@v1
+      # CLAUDE.md 全文只有 11 个字节：`@AGENTS.md`
+      - id: ptr
+        uses: janzong/agent-charters@v1
         with:
           path: CLAUDE.md
-      # 自证：11 字节的 `@AGENTS.md` 必须被**跟随**，而不是报「缺 9 个类别」
-      - name: show the summary then assert the pointer was followed
+      # 断言走**公开输出**（消费方真正能用的接口），不去读 step summary ——
+      # 踩过的坑：`GITHUB_STEP_SUMMARY` 是**每个 step 各一个**文件，
+      # 后面的 step 读到的是自己那份空的（第一次就是这么假失败的）。
+      - name: assert @v1 followed the pointer
         shell: bash
+        env:
+          FOLLOWED: ${{ steps.ptr.outputs.followed }}
+          MISSING: ${{ steps.ptr.outputs.missing }}
         run: |
-          set -uo pipefail
-          echo "GITHUB_STEP_SUMMARY=$GITHUB_STEP_SUMMARY"
-          echo "--- summary start ---"
-          cat "$GITHUB_STEP_SUMMARY"
-          echo "--- summary end ---"
-          a=$(grep -c 'Missing 6 of 9 categories' "$GITHUB_STEP_SUMMARY" || true)
-          b=$(grep -c 'Followed 1 pointer file(s)' "$GITHUB_STEP_SUMMARY" || true)
-          c=$(grep -c 'Missing 9 of 9 categories' "$GITHUB_STEP_SUMMARY" || true)
-          echo "counts: missing6=$a followed1=$b missing9=$c"
-          [ "$a" -ge 1 ] && [ "$b" -ge 1 ] && [ "$c" -eq 0 ] && echo "OK: followed the pointer in the real consumer path"
+          set -euo pipefail
+          echo "followed=$FOLLOWED"
+          echo "missing=$MISSING"
+          [ "$FOLLOWED" = "1" ]
+          n=$(printf '%s' "$MISSING" | tr ',' '\n' | grep -c . || true)
+          [ "$n" = "6" ]
+          printf '%s' "$MISSING" | grep -q gotchas
+          echo "OK: @v1 followed CLAUDE.md -> AGENTS.md (missing 6, not 9)"
