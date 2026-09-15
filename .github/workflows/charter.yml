@@ -24,3 +24,21 @@ jobs:
         with:
           path: AGENTS.md
           fail-on-missing: 'workflow,gotchas'
+
+  pointer-follow:
+    name: pointer-follow (CLAUDE.md is a pointer to AGENTS.md)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: janzong/agent-charters@v1
+        with:
+          path: CLAUDE.md
+      # 自证：11 字节的 `@AGENTS.md` 必须被**跟随**，而不是报「缺 9 个类别」
+      - name: assert the pointer was followed (not reported as empty)
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'Missing 6 of 9 categories' "$GITHUB_STEP_SUMMARY"
+          grep -q 'Followed 1 pointer file(s)' "$GITHUB_STEP_SUMMARY"
+          ! grep -q 'Missing 9 of 9 categories' "$GITHUB_STEP_SUMMARY"
+          echo "OK: followed the pointer in the real consumer path"
